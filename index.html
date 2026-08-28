@@ -739,7 +739,15 @@ function render(){
   const today = new Date();
   const yesterday = addDays(today,-1);
   const cycle = cycleRange(today);
-  document.getElementById("cycleLabel").textContent = "Ciclo atual: "+fmtDate(cycle.start)+" — "+fmtDate(cycle.end);
+
+  // Se o usuário escolheu um período manual nos filtros (Data inicial/Data final),
+  // esse período passa a valer para os cards e tabelas "do ciclo" — não fica mais
+  // preso ao ciclo 21-20 do mês corrente. Sem filtro de data, o comportamento
+  // padrão (ciclo atual) continua o mesmo de antes.
+  const temFiltroDataCustom = !!(FILTERS.dataIni || FILTERS.dataFim);
+  document.getElementById("cycleLabel").textContent = temFiltroDataCustom
+    ? "Período selecionado: "+(FILTERS.dataIni?fmtDate(FILTERS.dataIni):"início")+" — "+(FILTERS.dataFim?fmtDate(FILTERS.dataFim):"hoje")
+    : "Ciclo atual: "+fmtDate(cycle.start)+" — "+fmtDate(cycle.end);
 
   const uiFiltered = applyUIFilters(RAW_ROWS);
   const exec = rowsExecutadas(uiFiltered);
@@ -748,7 +756,7 @@ function render(){
   // ---------- KPIs ----------
   const groupsToday = groups.filter(g=>isSameDay(g.date, today));
   const groupsYesterday = groups.filter(g=>isSameDay(g.date, yesterday));
-  const groupsCiclo = groups.filter(g=>g.date>=cycle.start && g.date<=cycle.end);
+  const groupsCiclo = temFiltroDataCustom ? groups : groups.filter(g=>g.date>=cycle.start && g.date<=cycle.end);
 
   const valorHoje = groupsToday.reduce((s,g)=>s+g.valor,0);
   const valorOntem = groupsYesterday.reduce((s,g)=>s+g.valor,0);
@@ -775,18 +783,18 @@ function render(){
   const pctMetaGeral = metaTotal>0 ? (produzidoParaMeta/metaTotal*100) : 0;
 
   // asfalto no ciclo (soma sobre TODAS as linhas executadas do ciclo, não deduplicadas)
-  const execCiclo = exec.filter(r=>r.date>=cycle.start && r.date<=cycle.end);
+  const execCiclo = temFiltroDataCustom ? exec : exec.filter(r=>r.date>=cycle.start && r.date<=cycle.end);
   const asfaltoM3Ciclo = execCiclo.reduce((s,r)=>s+r.asfaltoM3,0);
   const asfaltoTonCiclo = asfaltoM3Ciclo * CONFIG.FATOR_CONVERSAO_ASFALTO_TONELADAS;
 
   document.getElementById("kpiGrid").innerHTML = [
     kpiCard("Valor produzido hoje", fmtBRL(valorHoje), valorOntem?{up:valorHoje>=valorOntem, text:fmtNum(Math.abs((valorHoje-valorOntem)/(valorOntem||1)*100))+"% vs ontem"}:null),
     kpiCard("O.S. executadas hoje", osHoje),
-    kpiCard("Valor produzido no ciclo", fmtBRL(valorCiclo)),
-    kpiCard("O.S. no ciclo", osCiclo),
+    kpiCard(temFiltroDataCustom?"Valor produzido no período":"Valor produzido no ciclo", fmtBRL(valorCiclo)),
+    kpiCard(temFiltroDataCustom?"O.S. no período":"O.S. no ciclo", osCiclo),
     kpiCard("Melhor equipe do dia", melhorEquipeHoje? melhorEquipeHoje[0] : "—"),
-    kpiCard("% da meta geral (ciclo)", fmtNum(pctMetaGeral,1)+"<small>%</small>"),
-    kpiCard("Asfalto no ciclo", fmtNum(asfaltoM3Ciclo,2)+"<small> m³</small>", null) + kpiCard("Asfalto no ciclo (ton)", fmtNum(asfaltoTonCiclo,2)+"<small> t</small>")
+    kpiCard("% da meta geral"+(temFiltroDataCustom?"":" (ciclo)"), fmtNum(pctMetaGeral,1)+"<small>%</small>"),
+    kpiCard(temFiltroDataCustom?"Asfalto no período":"Asfalto no ciclo", fmtNum(asfaltoM3Ciclo,2)+"<small> m³</small>", null) + kpiCard(temFiltroDataCustom?"Asfalto no período (ton)":"Asfalto no ciclo (ton)", fmtNum(asfaltoTonCiclo,2)+"<small> t</small>")
   ].join("");
 
   // ---------- Produção por equipe ----------
@@ -901,8 +909,10 @@ function render(){
     <div class="record-card"><div class="trophy">🏆</div><h3>Maior volume de asfalto em um dia</h3><div class="rvalue">${fmtNum(recordeAsfalto[1],2)} m³</div><div class="rmeta">${fmtNum(recordeAsfalto[1]*CONFIG.FATOR_CONVERSAO_ASFALTO_TONELADAS,2)} t · ${recordeAsfalto[0]}</div></div>`;
 
   // ---------- Evolução diária ----------
+  const rangeInicio = temFiltroDataCustom && FILTERS.dataIni ? FILTERS.dataIni : cycle.start;
+  const rangeFim = temFiltroDataCustom && FILTERS.dataFim ? FILTERS.dataFim : (temFiltroDataCustom ? today : cycle.end);
   const diasCiclo = [];
-  for(let d=new Date(cycle.start); d<=cycle.end && d<=today; d=addDays(d,1)) diasCiclo.push(new Date(d));
+  for(let d=new Date(rangeInicio); d<=rangeFim && d<=today; d=addDays(d,1)) diasCiclo.push(new Date(d));
   const valorPorDia = diasCiclo.map(d=>groupsCiclo.filter(g=>isSameDay(g.date,d)).reduce((s,g)=>s+g.valor,0));
   const osPorDia = diasCiclo.map(d=>groupsCiclo.filter(g=>isSameDay(g.date,d)).length);
   renderChart("chEvolValor","line", diasCiclo.map(d=>fmtDate(d).slice(0,5)), [{label:"Valor (R$)", data:valorPorDia, borderColor:PALETTE[0], backgroundColor:"rgba(14,124,144,.12)", fill:true, tension:.3}]);
@@ -983,7 +993,12 @@ function render(){
   document.getElementById("analysisAlerts").innerHTML = alerts.map(a=>`<li class="${a.cls}">${a.txt}</li>`).join("") || '<li>Nenhum alerta no momento.</li>';
 
   // ---------- Validação cruzada ----------
-  if(VALIDACAO_TOTAIS){
+  // Só faz sentido comparar com a aba RESUMO quando estamos mostrando o ciclo atual —
+  // se o usuário aplicou um período customizado, os totais naturalmente vão divergir
+  // (não é um erro, é só um recorte de dados diferente).
+  if(temFiltroDataCustom){
+    showValidacaoBanner(null);
+  } else if(VALIDACAO_TOTAIS){
     const divergencias = [];
     equipesAtivas.forEach(eq=>{
       const calculado = groupsCiclo.filter(g=>g.equipeCanon===eq).reduce((s,g)=>s+g.valor,0);
