@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel de Produção — Perspect Engenharia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+/* ============================================================
+   CONFIGURAÇÃO — TROQUE AQUI SE A PLANILHA OU AS EQUIPES MUDAREM
+   (bloco JS espelhado no <script> abaixo, seção CONFIG)
+   ============================================================ */
+:root{
+  --bg:#F4F7F8;
+  --surface:#FFFFFF;
+  --navy:#0B2A45;
+  --navy-soft:#274A66;
+  --teal:#0E7C90;
+  --teal-soft:#E4F1F3;
+  --blue:#1C6EA4;
+  --green:#1E8E5A;
+  --green-soft:#E7F5EC;
+  --amber:#C77F00;
+  --amber-soft:#FBF0DD;
+  --red:#C0392B;
+  --red-soft:#FCEAE8;
+  --gray:#8A94A6;
+  --gray-soft:#EEF1F4;
+  --border:#E1E7EC;
+  --shadow: 0 1px 2px rgba(11,42,69,.06), 0 4px 16px rgba(11,42,69,.04);
+  --radius: 14px;
+  --font-display: 'Space Grotesk', 'Inter', sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--bg);color:var(--navy);font-family:var(--font-body);-webkit-font-smoothing:antialiased;}
+h1,h2,h3{font-family:var(--font-display);margin:0;}
+a{color:inherit;}
+
+/* Header */
+.topbar{
+  background:linear-gradient(180deg,var(--navy) 0%,#0C3455 100%);
+  color:#fff;padding:20px 28px 26px;position:relative;overflow:hidden;
+}
+.topbar::after{
+  content:"";position:absolute;left:0;right:0;bottom:0;height:4px;
+  background:linear-gradient(90deg,var(--teal),var(--blue),var(--teal));
+  background-size:200% 100%;animation:flow 6s linear infinite;
+}
+@keyframes flow{0%{background-position:0% 0}100%{background-position:200% 0}}
+.topbar-row{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;}
+.topbar h1{font-size:22px;font-weight:700;letter-spacing:.2px;}
+.topbar .sub{color:#BBD4E3;font-size:13px;margin-top:4px;}
+.update-info{display:flex;align-items:center;gap:10px;font-size:13px;color:#DCEAF0;}
+.update-dot{width:8px;height:8px;border-radius:50%;background:#4CD37B;box-shadow:0 0 0 3px rgba(76,211,123,.25);}
+.btn{
+  border:none;border-radius:10px;padding:9px 16px;font-family:var(--font-body);font-weight:600;
+  font-size:13px;cursor:pointer;transition:.15s transform ease,.15s opacity ease;
+}
+.btn:active{transform:scale(.97);}
+.btn-primary{background:var(--teal);color:#fff;}
+.btn-primary:hover{opacity:.92;}
+.btn-ghost{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.25);}
+.btn-ghost:hover{background:rgba(255,255,255,.2);}
+.btn-outline{background:#fff;color:var(--navy);border:1px solid var(--border);}
+.btn-outline:hover{background:var(--gray-soft);}
+.btn-sm{padding:6px 11px;font-size:12px;border-radius:8px;}
+
+/* Layout */
+.wrap{max-width:1320px;margin:0 auto;padding:22px 20px 60px;}
+.section{margin-top:34px;}
+.section-head{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+.section-badge{
+  width:26px;height:26px;border-radius:50%;background:var(--teal-soft);color:var(--teal);
+  display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;font-family:var(--font-display);
+  flex:none;
+}
+.section-head h2{font-size:16px;color:var(--navy);letter-spacing:.2px;}
+.section-note{font-size:12px;color:var(--gray);margin-left:auto;}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);}
+.pad{padding:18px 20px;}
+
+/* Alert banner */
+.banner{display:none;align-items:flex-start;gap:10px;padding:12px 16px;border-radius:12px;font-size:13px;margin-bottom:16px;border:1px solid transparent;}
+.banner.show{display:flex;}
+.banner-warn{background:var(--amber-soft);color:#7A5200;border-color:#F1D9A6;}
+.banner-error{background:var(--red-soft);color:#7A2318;border-color:#F0C1BB;}
+.banner b{font-weight:700;}
+
+/* Filters */
+.filters{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;align-items:end;}
+.field label{display:block;font-size:11px;color:var(--gray);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px;}
+.field select,.field input{
+  width:100%;padding:8px 10px;border-radius:9px;border:1px solid var(--border);font-family:var(--font-body);
+  font-size:13px;background:#fff;color:var(--navy);
+}
+.filters-actions{display:flex;gap:8px;grid-column:1/-1;justify-content:flex-end;margin-top:4px;}
+
+/* KPI cards */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;}
+.kpi{padding:16px 18px;position:relative;}
+.kpi .label{font-size:11.5px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.4px;}
+.kpi .value{font-family:var(--font-display);font-size:26px;font-weight:700;margin-top:8px;color:var(--navy);line-height:1.1;}
+.kpi .value small{font-size:14px;font-weight:600;color:var(--gray);}
+.kpi .delta{font-size:12px;margin-top:6px;font-weight:600;}
+.up{color:var(--green);} .down{color:var(--red);}
+
+/* Team production table */
+.table-wrap{overflow-x:auto;}
+table.dtable{width:100%;border-collapse:collapse;font-size:13.5px;}
+table.dtable th{
+  text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--gray);
+  padding:10px 12px;border-bottom:1px solid var(--border);cursor:default;white-space:nowrap;
+}
+table.dtable td{padding:11px 12px;border-bottom:1px solid var(--border);white-space:nowrap;}
+table.dtable tr:last-child td{border-bottom:none;}
+.progress{width:110px;height:8px;border-radius:6px;background:var(--gray-soft);overflow:hidden;}
+.progress > div{height:100%;border-radius:6px;}
+.status-pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11.5px;font-weight:700;}
+.pill-green{background:var(--green-soft);color:var(--green);}
+.pill-amber{background:var(--amber-soft);color:var(--amber);}
+.pill-red{background:var(--red-soft);color:var(--red);}
+.pill-blue{background:var(--teal-soft);color:var(--teal);}
+.pill-gray{background:var(--gray-soft);color:var(--gray);}
+.arrow-up::before{content:"↑ ";}
+.arrow-down::before{content:"↓ ";}
+
+/* Grid layouts */
+.grid-2{display:grid;grid-template-columns:1.1fr .9fr;gap:16px;}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+@media(max-width:900px){.grid-2,.grid-3{grid-template-columns:1fr;}}
+
+.chart-card{padding:16px 18px 10px;}
+.chart-card .chart-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.chart-card h3{font-size:13.5px;color:var(--navy);}
+.chart-canvas-holder{position:relative;height:260px;}
+
+/* Records */
+.record-card{
+  background:linear-gradient(135deg,var(--navy) 0%,#0C3F63 100%);color:#fff;border-radius:var(--radius);
+  padding:18px 20px;position:relative;overflow:hidden;
+}
+.record-card .trophy{font-size:22px;}
+.record-card h3{font-size:14px;color:#BBD4E3;font-weight:600;margin-top:6px;}
+.record-card .rvalue{font-family:var(--font-display);font-size:24px;font-weight:700;margin-top:4px;}
+.record-card .rmeta{font-size:12px;color:#9FC0D3;margin-top:4px;}
+
+/* Analysis */
+.analysis-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px;}
+.analysis-list li{font-size:13.5px;padding:10px 12px;border-radius:10px;background:var(--gray-soft);}
+.analysis-list li.alert-amber{background:var(--amber-soft);color:#7A5200;}
+.analysis-list li.alert-green{background:var(--green-soft);color:#1E6B45;}
+.analysis-list li.alert-trophy{background:var(--teal-soft);color:#0A5966;}
+
+.text-muted{color:var(--gray);}
+.small{font-size:12px;}
+.footer{text-align:center;color:var(--gray);font-size:12px;margin-top:50px;padding-bottom:10px;}
+
+/* table pager/search */
+.table-toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;}
+.table-toolbar input{padding:8px 12px;border-radius:9px;border:1px solid var(--border);font-size:13px;width:220px;}
+.pager{display:flex;gap:6px;align-items:center;font-size:12.5px;}
+th.sortable{cursor:pointer;user-select:none;}
+th.sortable:hover{color:var(--navy);}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="wrap" style="padding:0;">
+    <div class="topbar-row">
+      <div>
+        <h1>Painel de Produção — Perspect Engenharia</h1>
+        <div class="sub">BI operacional · Contrato CAERN nº 23.01319</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;">
+        <div class="update-info"><span class="update-dot" id="statusDot"></span><span id="lastUpdate">Carregando dados…</span></div>
+        <button class="btn btn-ghost" id="btnRefresh">Atualizar agora</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div id="bannerValidacao" class="banner banner-warn"></div>
+  <div id="bannerErro" class="banner banner-error"></div>
+
+  <!-- FILTROS -->
+  <div class="card pad">
+    <div class="filters">
+      <div class="field"><label>Data inicial</label><input type="date" id="fDataIni"></div>
+      <div class="field"><label>Data final</label><input type="date" id="fDataFim"></div>
+      <div class="field"><label>Equipe</label><select id="fEquipe"><option value="">Todas</option></select></div>
+      <div class="field"><label>Tipo de equipe</label>
+        <select id="fTipo">
+          <option value="">Todos</option>
+          <option value="carro">Carro (ramal)</option>
+          <option value="moto">Moto</option>
+          <option value="pavimento">Pavimento</option>
+        </select>
+      </div>
+      <div class="field"><label>Serviço</label><select id="fServico"><option value="">Todos</option></select></div>
+      <div class="field"><label>Asfalto</label>
+        <select id="fAsfalto"><option value="">Todos</option><option value="sim">Com asfalto</option><option value="nao">Sem asfalto</option></select>
+      </div>
+      <div class="field"><label>Período rápido</label>
+        <select id="fRapido">
+          <option value="">—</option>
+          <option value="hoje">Hoje</option>
+          <option value="ontem">Ontem</option>
+          <option value="7dias">Últimos 7 dias</option>
+          <option value="ciclo">Este ciclo</option>
+          <option value="ciclo_anterior">Ciclo anterior</option>
+          <option value="mes">Mês atual</option>
+        </select>
+      </div>
+    </div>
+    <div class="filters-actions">
+      <button class="btn btn-outline btn-sm" id="btnLimpar">Limpar filtros</button>
+      <button class="btn btn-primary btn-sm" id="btnAplicar">Aplicar filtros</button>
+    </div>
+  </div>
+
+  <!-- RESUMO EXECUTIVO -->
+  <div class="section">
+    <div class="section-head"><div class="section-badge">01</div><h2>Resumo executivo</h2><span class="section-note" id="cycleLabel"></span></div>
+    <div class="kpi-grid" id="kpiGrid"></div>
+  </div>
+
+  <!-- PRODUÇÃO POR EQUIPE -->
+  <div class="section">
+    <div class="section-head"><div class="section-badge">02</div><h2>Produção por equipe</h2></div>
+    <div class="grid-2">
+      <div class="card pad table-wrap">
+        <table class="dtable" id="tblEquipes">
+          <thead><tr><th>Equipe</th><th>O.S.</th><th>Valor</th><th>Meta</th><th>Evolução</th><th>Status</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="card chart-card">
+        <div class="chart-head"><h3>Valor produzido por equipe</h3><button class="btn btn-outline btn-sm" data-chart="chValorEquipe">Baixar PNG</button></div>
+        <div class="chart-canvas-holder"><canvas id="chValorEquipe"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RANKING -->
+  <div class="section">
+    <div class="section-head"><div class="section-badge">03</div><h2>Ranking das equipes</h2><span class="section-note">Separado por tipo — ramal/carro, moto e pavimento não são comparados entre si</span></div>
+    <div class="grid-3" id="rankingGrid"></div>
+  </div>
+
+  <!-- COMPARATIVO HOJE X ONTEM -->
+  <div class="section">
+    <div class="section-head"><div class="section-badge">04</div><h2>Comparativo hoje × ontem</h2></div>
+    <div class="grid-2">
+      <div class="card pad" id="compareCards" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;"></div>
+      <div class="card chart-card">
+        <div class="chart-head"><h3>Hoje × Ontem</h3><button class="btn btn-outline btn-sm" data-chart="chHojeOntem">Baixar PNG</button></div>
+        <div class="chart-canvas-holder"><canvas id="chHojeOntem"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RECORDE DO DIA -->
+  <div class="section">
+    <div class="section-head"><div class="section-badge">05</div><h2>Recorde do dia</h2><span class="section-note">Considera todo o histórico disponível na planilha</span></div>
+    <div class="grid-3" id="recordGrid"></div>
+  </div>
+
+  <!-- EVOLUÇÃO DIÁRIA -->
+  <div class="section">
+    <div class="section-head"><div class="section-badge">06</div><h2>Evolução diária</h2></div>
+    <div class="grid-2">
+      <div class="card chart-card">
+        <div class="chart-head"><h3>Valor produzido por dia</h3><button class="btn btn-outline btn-sm" data-chart="chEvolValor">Baixar PNG</button></div>
+        <div class="chart-canvas-holder"><canvas id="chEvolValor"></canvas></div>
+      </div>
+      <div class="card chart-card">
+        <div class="chart-head"><h3>O.S. executadas por dia</h3><button class="btn btn-outline btn-sm" data-chart="chEvolOS">Baixar PNG</button></div>
+        <div class="chart-canvas-holder"><canvas id="chEvolOS"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAVIMENTAÇÃO -->
+  <div class="section">
+    <div class="section-head"><div class="section-badge">07</div><h2>Pavimentação</h2><span class="section-note">Somente equipes PAV EQ 01 / 02 / 03</span></div>
+    <div class="kpi-grid" id="kpiPavimento"></div>
+    <div class="grid-2" style="margin-top:14px;">
+      <div class="card chart-card">
+        <div class="chart-head"><h3>M² executados por equipe</h3><button class="btn btn-outline btn-sm" data-chart="chM2Equipe">Baixar PNG</button></div>
+        <div class="chart-canvas-holder"><canvas id="chM2Equipe"></canvas></div>
+      </div>
+      <div class="card chart-card">
+        <div class="chart-head"><h3>M² executados por dia</h3><button class="btn btn-outline btn-sm" data-chart="chM2Dia">Baixar PNG</button></div>
+        <div class="chart-canvas-holder"><canvas id="chM2Dia"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SERVIÇO 21.9 -->
+  <div class="section">
+    <div class="section-head"><div class="section-badge">08</div><h2>Serviço 21.9 — Recomposição de paralelepípedo</h2></div>
+    <div class="grid-2">
+      <div class="kpi-grid" id="kpi219" style="align-content:start;"></div>
+      <div class="card chart-card">
+        <div class="chart-head"><h3>Serviço 21.9 por equipe</h3><button class="btn btn-outline btn-sm" data-chart="ch219">Baixar PNG</button></div>
+        <div class="chart-canvas-holder"><canvas id="ch219"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ASFALTO -->
+  <div class="section">
+    <div class="section-head"><div class="section-badge">09</div><h2>Aplicação de asfalto</h2></div>
+    <div class="grid-2">
+      <div class="kpi-grid" id="kpiAsfalto" style="align-content:start;"></div>
+      <div class="card chart-card">
+        <div class="chart-head"><h3>Com asfalto × sem asfalto</h3><button class="btn btn-outline btn-sm" data-chart="chAsfalto">Baixar PNG</button></div>
+        <div class="chart-canvas-holder"><canvas id="chAsfalto"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SERVIÇOS MAIS/MENOS EXECUTADOS -->
+  <div class="section">
+    <div class="section-head"><div class="section-badge">10</div><h2>Serviços mais e menos executados</h2></div>
+    <div class="grid-2">
+      <div class="card chart-card">
+        <div class="chart-head"><h3>Top 5 serviços</h3><button class="btn btn-outline btn-sm" data-chart="chTopServ">Baixar PNG</button></div>
+        <div class="chart-canvas-holder"><canvas id="chTopServ"></canvas></div>
+      </div>
+      <div class="card chart-card">
+        <div class="chart-head"><h3>Serviços menos executados</h3><button class="btn btn-outline btn-sm" data-chart="chBottomServ">Baixar PNG</button></div>
+        <div class="chart-canvas-holder"><canvas id="chBottomServ"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- % META POR EQUIPE + RANKING CHART -->
+  <div class="section">
+    <div class="section-head"><div class="section-badge">11</div><h2>Metas e ranking (visão gráfica)</h2></div>
+    <div class="grid-2">
+      <div class="card chart-card">
+        <div class="chart-head"><h3>% da meta por equipe</h3><button class="btn btn-outline btn-sm" data-chart="chMeta">Baixar PNG</button></div>
+        <div class="chart-canvas-holder"><canvas id="chMeta"></canvas></div>
+      </div>
+      <div class="card chart-card">
+        <div class="chart-head"><h3>Ranking geral (valor produzido)</h3><button class="btn btn-outline btn-sm" data-chart="chRanking">Baixar PNG</button></div>
+        <div class="chart-canvas-holder"><canvas id="chRanking"></canvas></div>
+      </div>
+    </div>
+    <div style="text-align:right;margin-top:10px;">
+      <button class="btn btn-outline btn-sm" id="btnBaixarTodos">Baixar todos os gráficos (PNG)</button>
+    </div>
+  </div>
+
+  <!-- ANÁLISE GERENCIAL -->
+  <div class="section">
+    <div class="section-head"><div class="section-badge">12</div><h2>Análise gerencial</h2></div>
+    <div class="card pad">
+      <p id="analysisText" style="font-size:14px;line-height:1.55;margin:0 0 12px;"></p>
+      <ul class="analysis-list" id="analysisAlerts"></ul>
+    </div>
+  </div>
+
+  <!-- TABELA DETALHADA -->
+  <div class="section">
+    <div class="section-head"><div class="section-badge">13</div><h2>Tabela detalhada</h2></div>
+    <div class="card pad">
+      <div class="table-toolbar">
+        <input type="text" id="tableSearch" placeholder="Buscar na tabela…">
+        <div class="pager">
+          <button class="btn btn-outline btn-sm" id="pagerPrev">‹</button>
+          <span id="pagerInfo">página 1</span>
+          <button class="btn btn-outline btn-sm" id="pagerNext">›</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="dtable" id="tblDetalhe">
+          <thead><tr>
+            <th class="sortable" data-key="date">Data</th>
+            <th class="sortable" data-key="os">Nº O.S</th>
+            <th class="sortable" data-key="equipeCanon">Equipe</th>
+            <th class="sortable" data-key="descricao">Serviço</th>
+            <th class="sortable" data-key="valorTotalExecutado">Valor</th>
+            <th class="sortable" data-key="areaM2">M²</th>
+            <th class="sortable" data-key="asfaltoSimNao">Asfalto</th>
+            <th class="sortable" data-key="situacao">Situação</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">Painel gerado a partir da planilha "Controle Produção Final Aprimorado" · Perspect Engenharia — uso interno</div>
+</div>
+
+<script>
+/* ============================================================
+   0. CONFIGURAÇÃO CENTRALIZADA
+   Troque aqui se: a planilha mudar, novas equipes entrarem,
+   o fator de conversão do asfalto mudar, etc.
+   ============================================================ */
+const CONFIG = {
+  SHEET_ID: "1yUTeUEVUGLHNSIwkFYXII2hPaMNFsNJqz7traREAudE",
+  SHEET_NAME_DADOS: "CONTROLE DE PRODUÇÃO",
+  SHEET_NAME_VALIDACAO: "RESUMO MENSAL & DASHBOARD",
+  INTERVALO_ATUALIZACAO_MS: 60000,
+  FATOR_CONVERSAO_ASFALTO_TONELADAS: 2.2, // t/m³ — orientação do engenheiro Apolo
+
+  METAS: {
+    carro: 16000,
+    moto: 8000,
+    pavimento: 300 // m²
+  },
+
+  // A planilha só traz o nome do agente/equipe — o tipo é inferido por esta tabela.
+  // Comparação é sempre case-insensitive e ignora acentos.
+  TIPO_EQUIPE: {
+    carro: ["Jeovane", "Jeovani", "Nilson", "Alan", "Damiao", "Marcos", "Suzenilson"],
+    moto: ["Danilo", "Isaias"],
+    pavimento: ["PAV EQ 01 PERSPECT", "PAV EQ 02 PERSPECT", "PAV EQ 03 PERSPECT"]
+  },
+
+  // Unificação de nomes antigos → nome atual, para o cálculo de recorde histórico.
+  // Preencha mais entradas aqui conforme forem confirmadas.
+  ALIAS_EQUIPE: {
+    "TAPA BURACO THIAGO": "PAV EQ 02 PERSPECT" // Thiago é membro confirmado da PAV EQ 02
+    // "TAPA BURACO PAULO": null,  // não identificado — não unificar até confirmar
+    // Encanadores antigos vistos no histórico (Jalison, Marciano, Joanderson, Erivan, Alderi)
+    // ainda não têm equivalência confirmada — não são unificados automaticamente.
+  }
+};
+
+/* ============================================================
+   1. UTILITÁRIOS DE NORMALIZAÇÃO
+   ============================================================ */
+function normalize(s){
+  if(s===null||s===undefined) return "";
+  return String(s).normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim().toUpperCase();
+}
+function parseBRDate(str){
+  // aceita "16/04/2026" (formatado pelo gviz) ou objeto Date(y,m,d) serializado
+  if(!str) return null;
+  const m = String(str).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if(m) return new Date(+m[3], +m[2]-1, +m[1]);
+  const d = String(str).match(/Date\((\d+),(\d+),(\d+)\)/);
+  if(d) return new Date(+d[1], +d[2], +d[3]);
+  return null;
+}
+function fmtDate(d){
+  if(!d) return "—";
+  return String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+d.getFullYear();
+}
+function fmtBRL(v){
+  return (v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+}
+function fmtNum(v,dec=1){
+  return (v||0).toLocaleString("pt-BR",{minimumFractionDigits:dec,maximumFractionDigits:dec});
+}
+function toNumber(v){
+  if(typeof v === "number") return v;
+  if(!v) return 0;
+  const n = parseFloat(String(v).replace(/[^\d,-]/g,"").replace(",","."));
+  return isNaN(n) ? 0 : n;
+}
+function dateKey(d){ return d ? d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0") : ""; }
+function isSameDay(a,b){ return a && b && a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate(); }
+function addDays(d,n){ const r=new Date(d); r.setDate(r.getDate()+n); return r; }
+
+function tipoDeEquipe(nomeCanon){
+  const n = normalize(nomeCanon);
+  for(const tipo of Object.keys(CONFIG.TIPO_EQUIPE)){
+    if(CONFIG.TIPO_EQUIPE[tipo].some(x=>normalize(x)===n)) return tipo;
+  }
+  return "desconhecido";
+}
+function equipeCanonica(nomeRaw){
+  const n = normalize(nomeRaw);
+  for(const [antigo, atual] of Object.entries(CONFIG.ALIAS_EQUIPE)){
+    if(normalize(antigo)===n && atual) return atual;
+  }
+  return (nomeRaw||"").trim();
+}
+function cycleRange(ref){
+  const d = new Date(ref);
+  let start, end;
+  if(d.getDate() >= 21){
+    start = new Date(d.getFullYear(), d.getMonth(), 21);
+    end   = new Date(d.getFullYear(), d.getMonth()+1, 20);
+  } else {
+    start = new Date(d.getFullYear(), d.getMonth()-1, 21);
+    end   = new Date(d.getFullYear(), d.getMonth(), 20);
+  }
+  return {start, end};
+}
+
+/* ============================================================
+   2. LEITURA DO GOOGLE SHEETS (gviz)
+   ============================================================ */
+async function fetchSheet(sheetName){
+  const url = `https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}&headers=1`;
+  const res = await fetch(url);
+  const text = await res.text();
+  const match = text.match(/setResponse\(([\s\S]*)\);\s*$/);
+  if(!match) throw new Error("Não foi possível ler a aba '"+sheetName+"'. Verifique se a planilha está compartilhada como 'qualquer pessoa com o link pode visualizar'.");
+  return JSON.parse(match[1]);
+}
+
+function findColIndex(cols, keywordSets){
+  // keywordSets: array de arrays — cada sub-array é um conjunto de palavras que TODAS precisam aparecer no label
+  for(const keywords of keywordSets){
+    const idx = cols.findIndex(c=>{
+      const label = normalize(c.label);
+      return keywords.every(k=>label.includes(normalize(k)));
+    });
+    if(idx>=0) return idx;
+  }
+  return -1;
+}
+
+let RAW_ROWS = [];      // todas as linhas cruas parseadas (todo o histórico)
+let COL_MAP = {};
+let MISSING_COLS = [];
+
+async function loadData(){
+  const json = await fetchSheet(CONFIG.SHEET_NAME_DADOS);
+  const cols = json.table.cols;
+
+  COL_MAP = {
+    data:        findColIndex(cols, [["DATA"]]),
+    os:          findColIndex(cols, [["O.S"], ["OS"], ["N","O.S"]]),
+    equipe:      findColIndex(cols, [["AGENTE"], ["EQUIPE"]]),
+    item:        findColIndex(cols, [["ITEM"]]),
+    descricao:   findColIndex(cols, [["DESCRICAO","SERVICO"], ["DESCRICAO"]]),
+    areaM2:      findColIndex(cols, [["RECOMPOSICAO"], ["AREA","M"]]),
+    asfaltoSim:  findColIndex(cols, [["ASFALTO","?"], ["ASFALTO","SIM"]]),
+    asfaltoM3:   findColIndex(cols, [["ASFALTO","M3"], ["ASFALTO","M³"]]),
+    situacao:    findColIndex(cols, [["SITUACAO"]]),
+    valorServico:findColIndex(cols, [["VALOR","DO","SERVICO"]]),
+    valorTotal:  findColIndex(cols, [["VALOR","TOTAL","EXECUTADO"]]),
+  };
+
+  MISSING_COLS = Object.entries(COL_MAP).filter(([k,v])=>v<0 && ["data","os","equipe","situacao","valorTotal"].includes(k)).map(([k])=>k);
+  if(MISSING_COLS.length){
+    showError("Colunas obrigatórias não encontradas na planilha: "+MISSING_COLS.join(", ")+". O dashboard não pode calcular os indicadores corretamente até isso ser corrigido — verifique os nomes das colunas na aba '"+CONFIG.SHEET_NAME_DADOS+"'.");
+  }
+
+  const rows = json.table.rows;
+  RAW_ROWS = [];
+  for(const r of rows){
+    try{
+      const c = r.c;
+      const get = (idx)=> idx>=0 && c[idx] ? c[idx] : null;
+      const dataCell = get(COL_MAP.data);
+      const date = dataCell ? parseBRDate(dataCell.f || dataCell.v) : null;
+      const os = get(COL_MAP.os);
+      const osVal = os ? (os.v!==null && os.v!==undefined ? String(os.v).trim() : String(os.f||"").trim()) : "";
+      if(!date || !osVal) continue; // ignora linhas vazias/incompletas
+      const equipeRaw = (get(COL_MAP.equipe)||{}).v || "";
+      const situacao = normalize((get(COL_MAP.situacao)||{}).v || "");
+      const asfaltoSimCell = get(COL_MAP.asfaltoSim);
+      const asfaltoSim = normalize((asfaltoSimCell||{}).v||"") === "SIM";
+      RAW_ROWS.push({
+        date, dateKey: dateKey(date),
+        os: osVal,
+        equipeRaw: String(equipeRaw).trim(),
+        equipeCanon: equipeCanonica(equipeRaw),
+        item: String((get(COL_MAP.item)||{}).v||"").trim(),
+        descricao: String((get(COL_MAP.descricao)||{}).v||"").trim(),
+        areaM2: toNumber((get(COL_MAP.areaM2)||{}).v),
+        asfaltoSimNao: asfaltoSim ? "Sim" : "Não",
+        asfaltoM3: toNumber((get(COL_MAP.asfaltoM3)||{}).v),
+        situacao,
+        valorTotalExecutado: toNumber((get(COL_MAP.valorTotal)||{}).v),
+      });
+    }catch(e){ /* linha malformada — ignora e segue */ }
+  }
+}
+
+async function loadValidacao(){
+  try{
+    const json = await fetchSheet(CONFIG.SHEET_NAME_VALIDACAO);
+    const rows = json.table.rows;
+    // procura a linha de cabeçalho real (coluna A = "EQUIPE") dentro da grade
+    let headerRowIdx = -1;
+    for(let i=0;i<rows.length;i++){
+      const v = rows[i].c[0] && rows[i].c[0].v;
+      if(v && normalize(v)==="EQUIPE"){ headerRowIdx=i; break; }
+    }
+    if(headerRowIdx<0) return null;
+    const totals = {};
+    for(let i=headerRowIdx+1;i<rows.length;i++){
+      const c = rows[i].c;
+      const nome = c[0] && c[0].v;
+      if(!nome) break;
+      const total = c[1] ? toNumber(c[1].v) : 0;
+      totals[String(nome).trim()] = total;
+    }
+    return totals;
+  }catch(e){ return null; }
+}
+
+/* ============================================================
+   3. FILTRO DE STATUS + DEDUPLICAÇÃO DE O.S.
+   ============================================================ */
+function rowsExecutadas(rows){
+  return rows.filter(r=>r.situacao==="EXECUTADA");
+}
+function osGroups(execRows){
+  const map = new Map();
+  for(const r of execRows){
+    const key = r.dateKey+"|"+r.os;
+    if(!map.has(key)){
+      map.set(key, {dateKey:r.dateKey, date:r.date, os:r.os, equipeRaw:r.equipeRaw, equipeCanon:r.equipeCanon, valor:0});
+    }
+    map.get(key).valor += r.valorTotalExecutado;
+  }
+  return Array.from(map.values());
+}
+
+/* ============================================================
+   4. ESTADO DE FILTROS DA UI
+   ============================================================ */
+let FILTERS = {dataIni:null, dataFim:null, equipe:"", tipo:"", servico:"", asfalto:""};
+
+function applyUIFilters(rows){
+  return rows.filter(r=>{
+    if(FILTERS.dataIni && r.date < FILTERS.dataIni) return false;
+    if(FILTERS.dataFim && r.date > FILTERS.dataFim) return false;
+    if(FILTERS.equipe && r.equipeCanon !== FILTERS.equipe) return false;
+    if(FILTERS.tipo && tipoDeEquipe(r.equipeCanon) !== FILTERS.tipo) return false;
+    if(FILTERS.servico && r.descricao !== FILTERS.servico) return false;
+    if(FILTERS.asfalto === "sim" && r.asfaltoSimNao!=="Sim") return false;
+    if(FILTERS.asfalto === "nao" && r.asfaltoSimNao!=="Não") return false;
+    return true;
+  });
+}
+
+/* ============================================================
+   5. GRÁFICOS — helper genérico
+   ============================================================ */
+const CHART_INSTANCES = {};
+const PALETTE = ["#0E7C90","#1C6EA4","#1E8E5A","#C77F00","#C0392B","#8A94A6","#274A66","#5EA6B0"];
+function renderChart(canvasId, type, labels, datasets, opts={}){
+  const el = document.getElementById(canvasId);
+  if(!el) return;
+  if(CHART_INSTANCES[canvasId]) CHART_INSTANCES[canvasId].destroy();
+  CHART_INSTANCES[canvasId] = new Chart(el, {
+    type,
+    data:{labels, datasets},
+    options:Object.assign({
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display: datasets.length>1 || type==="pie" || type==="doughnut", labels:{font:{family:"Inter",size:11}}},
+        tooltip:{titleFont:{family:"Inter"}, bodyFont:{family:"Inter"}}
+      },
+      scales: type==="pie"||type==="doughnut" ? {} : {
+        y:{beginAtZero:true, ticks:{font:{family:"Inter",size:11}}},
+        x:{ticks:{font:{family:"Inter",size:11}}}
+      }
+    }, opts)
+  });
+}
+function downloadChart(canvasId){
+  const inst = CHART_INSTANCES[canvasId];
+  if(!inst) return;
+  const a = document.createElement("a");
+  a.href = inst.toBase64Image();
+  a.download = canvasId+".png";
+  a.click();
+}
+document.addEventListener("click", (e)=>{
+  const btn = e.target.closest("[data-chart]");
+  if(btn) downloadChart(btn.dataset.chart);
+});
+document.getElementById("btnBaixarTodos").addEventListener("click", ()=>{
+  const ids = Object.keys(CHART_INSTANCES);
+  ids.forEach((id,i)=> setTimeout(()=>downloadChart(id), i*350));
+});
+
+/* ============================================================
+   6. RENDERIZAÇÃO PRINCIPAL
+   ============================================================ */
+function showError(msg){
+  const b = document.getElementById("bannerErro");
+  b.innerHTML = "<span>⚠️</span><span><b>Atenção:</b> "+msg+"</span>";
+  b.classList.add("show");
+}
+function showValidacaoBanner(msg){
+  const b = document.getElementById("bannerValidacao");
+  if(!msg){ b.classList.remove("show"); return; }
+  b.innerHTML = "<span>ℹ️</span><span>"+msg+"</span>";
+  b.classList.add("show");
+}
+
+function populateFilterOptions(){
+  const equipes = Array.from(new Set(RAW_ROWS.map(r=>r.equipeCanon))).filter(Boolean).sort();
+  const servicos = Array.from(new Set(RAW_ROWS.map(r=>r.descricao))).filter(Boolean).sort();
+  const selEquipe = document.getElementById("fEquipe");
+  const selServico = document.getElementById("fServico");
+  selEquipe.innerHTML = '<option value="">Todas</option>'+equipes.map(e=>`<option value="${e}">${e}</option>`).join("");
+  selServico.innerHTML = '<option value="">Todos</option>'+servicos.map(s=>`<option value="${s}">${s}</option>`).join("");
+}
+
+function kpiCard(label, value, delta){
+  return `<div class="card kpi"><div class="label">${label}</div><div class="value">${value}</div>${delta?`<div class="delta ${delta.up?'up':'down'}">${delta.up?'↑':'↓'} ${delta.text}</div>`:""}</div>`;
+}
+
+let VALIDACAO_TOTAIS = null;
+let TABLE_STATE = {rows:[], sortKey:"date", sortDir:-1, page:1, pageSize:15, search:""};
+
+async function refreshAll(){
+  document.getElementById("statusDot").style.background = "#F1C232";
+  document.getElementById("lastUpdate").textContent = "Atualizando…";
+  try{
+    await loadData();
+    populateFilterOptions();
+    VALIDACAO_TOTAIS = await loadValidacao();
+    render();
+    const now = new Date();
+    document.getElementById("lastUpdate").textContent = "Última atualização: "+fmtDate(now)+" "+String(now.getHours()).padStart(2,"0")+":"+String(now.getMinutes()).padStart(2,"0");
+    document.getElementById("statusDot").style.background = "#4CD37B";
+  }catch(e){
+    showError(e.message || "Falha ao carregar a planilha.");
+    document.getElementById("statusDot").style.background = "#C0392B";
+    document.getElementById("lastUpdate").textContent = "Falha na última atualização";
+  }
+}
+
+function render(){
+  const today = new Date();
+  const yesterday = addDays(today,-1);
+  const cycle = cycleRange(today);
+  document.getElementById("cycleLabel").textContent = "Ciclo atual: "+fmtDate(cycle.start)+" — "+fmtDate(cycle.end);
+
+  const uiFiltered = applyUIFilters(RAW_ROWS);
+  const exec = rowsExecutadas(uiFiltered);
+  const groups = osGroups(exec);
+
+  // ---------- KPIs ----------
+  const groupsToday = groups.filter(g=>isSameDay(g.date, today));
+  const groupsYesterday = groups.filter(g=>isSameDay(g.date, yesterday));
+  const groupsCiclo = groups.filter(g=>g.date>=cycle.start && g.date<=cycle.end);
+
+  const valorHoje = groupsToday.reduce((s,g)=>s+g.valor,0);
+  const valorOntem = groupsYesterday.reduce((s,g)=>s+g.valor,0);
+  const valorCiclo = groupsCiclo.reduce((s,g)=>s+g.valor,0);
+  const osHoje = groupsToday.length;
+  const osCiclo = groupsCiclo.length;
+
+  // melhor equipe do dia
+  const porEquipeHoje = {};
+  groupsToday.forEach(g=>{ porEquipeHoje[g.equipeCanon] = (porEquipeHoje[g.equipeCanon]||0)+g.valor; });
+  let melhorEquipeHoje = Object.entries(porEquipeHoje).sort((a,b)=>b[1]-a[1])[0];
+
+  // % meta geral (soma de todas as equipes ponderada pela meta de cada uma — proporção simples)
+  const equipesTipoMap = {};
+  groups.forEach(g=>{ equipesTipoMap[g.equipeCanon] = tipoDeEquipe(g.equipeCanon); });
+  let metaTotal = 0, produzidoParaMeta = 0;
+  Object.keys(equipesTipoMap).forEach(eq=>{
+    const tipo = equipesTipoMap[eq];
+    if(tipo==="pavimento") return; // meta em m², não soma com R$
+    if(tipo==="desconhecido") return;
+    metaTotal += CONFIG.METAS[tipo];
+    produzidoParaMeta += groupsCiclo.filter(g=>g.equipeCanon===eq).reduce((s,g)=>s+g.valor,0);
+  });
+  const pctMetaGeral = metaTotal>0 ? (produzidoParaMeta/metaTotal*100) : 0;
+
+  // asfalto no ciclo (soma sobre TODAS as linhas executadas do ciclo, não deduplicadas)
+  const execCiclo = exec.filter(r=>r.date>=cycle.start && r.date<=cycle.end);
+  const asfaltoM3Ciclo = execCiclo.reduce((s,r)=>s+r.asfaltoM3,0);
+  const asfaltoTonCiclo = asfaltoM3Ciclo * CONFIG.FATOR_CONVERSAO_ASFALTO_TONELADAS;
+
+  document.getElementById("kpiGrid").innerHTML = [
+    kpiCard("Valor produzido hoje", fmtBRL(valorHoje), valorOntem?{up:valorHoje>=valorOntem, text:fmtNum(Math.abs((valorHoje-valorOntem)/(valorOntem||1)*100))+"% vs ontem"}:null),
+    kpiCard("O.S. executadas hoje", osHoje),
+    kpiCard("Valor produzido no ciclo", fmtBRL(valorCiclo)),
+    kpiCard("O.S. no ciclo", osCiclo),
+    kpiCard("Melhor equipe do dia", melhorEquipeHoje? melhorEquipeHoje[0] : "—"),
+    kpiCard("% da meta geral (ciclo)", fmtNum(pctMetaGeral,1)+"<small>%</small>"),
+    kpiCard("Asfalto no ciclo", fmtNum(asfaltoM3Ciclo,2)+"<small> m³</small>", null) + kpiCard("Asfalto no ciclo (ton)", fmtNum(asfaltoTonCiclo,2)+"<small> t</small>")
+  ].join("");
+
+  // ---------- Produção por equipe ----------
+  const equipesAtivas = Array.from(new Set(groups.map(g=>g.equipeCanon))).filter(Boolean);
+  const teamRows = equipesAtivas.map(eq=>{
+    const tipo = tipoDeEquipe(eq);
+    const gCiclo = groupsCiclo.filter(g=>g.equipeCanon===eq);
+    const valor = gCiclo.reduce((s,g)=>s+g.valor,0);
+    const osCount = gCiclo.length;
+    const m2 = execCiclo.filter(r=>r.equipeCanon===eq).reduce((s,r)=>s+r.areaM2,0);
+    let pct = 0;
+    if(tipo==="pavimento") pct = CONFIG.METAS.pavimento>0 ? (m2/CONFIG.METAS.pavimento*100) : 0;
+    else if(tipo!=="desconhecido") pct = CONFIG.METAS[tipo]>0 ? (valor/CONFIG.METAS[tipo]*100) : 0;
+
+    const hojeVal = groupsToday.filter(g=>g.equipeCanon===eq).reduce((s,g)=>s+g.valor,0);
+    const ontemVal = groupsYesterday.filter(g=>g.equipeCanon===eq).reduce((s,g)=>s+g.valor,0);
+    const evolucao = ontemVal>0 ? ((hojeVal-ontemVal)/ontemVal*100) : (hojeVal>0?100:0);
+
+    let status="pill-gray", statusLabel="—";
+    if(pct>=150){status="pill-blue"; statusLabel="Destaque";}
+    else if(pct>=100){status="pill-green"; statusLabel="Meta atingida";}
+    else if(pct>=90){status="pill-green"; statusLabel="Próximo da meta";}
+    else if(pct>=70){status="pill-amber"; statusLabel="Atenção";}
+    else {status="pill-red"; statusLabel="Crítico";}
+
+    return {eq, tipo, valor, osCount, m2, pct, evolucao, status, statusLabel};
+  }).sort((a,b)=>b.valor-a.valor);
+
+  document.querySelector("#tblEquipes tbody").innerHTML = teamRows.map(t=>`
+    <tr>
+      <td><b>${t.eq}</b></td>
+      <td>${t.osCount}</td>
+      <td>${t.tipo==="pavimento" ? fmtNum(t.m2,1)+" m²" : fmtBRL(t.valor)}</td>
+      <td><div class="progress"><div style="width:${Math.min(t.pct,100)}%;background:${t.pct>=100?'var(--green)':t.pct>=70?'var(--amber)':'var(--red)'}"></div></div></td>
+      <td class="${t.evolucao>=0?'up arrow-up':'down arrow-down'}">${fmtNum(Math.abs(t.evolucao),0)}%</td>
+      <td><span class="status-pill ${t.status}">${t.statusLabel} · ${fmtNum(t.pct,0)}%</span></td>
+    </tr>`).join("") || `<tr><td colspan="6" class="text-muted">Sem dados para os filtros selecionados.</td></tr>`;
+
+  renderChart("chValorEquipe","bar",
+    teamRows.filter(t=>t.tipo!=="pavimento").map(t=>t.eq),
+    [{label:"Valor produzido (R$)", data:teamRows.filter(t=>t.tipo!=="pavimento").map(t=>t.valor), backgroundColor:PALETTE[0]}]
+  );
+
+  // ---------- Ranking separado por tipo ----------
+  const rankingHTML = ["carro","moto","pavimento"].map(tipo=>{
+    const titulo = tipo==="carro"?"Ramal — Carro":tipo==="moto"?"Ramal — Moto":"Pavimento";
+    const lista = teamRows.filter(t=>t.tipo===tipo).sort((a,b)=> tipo==="pavimento" ? b.m2-a.m2 : b.valor-a.valor).slice(0,5);
+    const medalhas = ["🏆","🥈","🥉"];
+    return `<div class="card pad">
+      <h3 style="font-size:13.5px;margin-bottom:10px;">${titulo}</h3>
+      ${lista.map((t,i)=>`<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;">
+        <span>${medalhas[i]||(i+1)+"º"} ${t.eq}</span>
+        <b>${tipo==="pavimento"?fmtNum(t.m2,1)+" m²":fmtBRL(t.valor)}</b>
+      </div>`).join("") || '<span class="text-muted small">Sem dados.</span>'}
+    </div>`;
+  }).join("");
+  document.getElementById("rankingGrid").innerHTML = rankingHTML;
+
+  renderChart("chRanking","bar",
+    teamRows.filter(t=>t.tipo!=="pavimento").sort((a,b)=>b.valor-a.valor).map(t=>t.eq),
+    [{label:"Valor (R$)", data:teamRows.filter(t=>t.tipo!=="pavimento").sort((a,b)=>b.valor-a.valor).map(t=>t.valor), backgroundColor:PALETTE[1]}]
+  );
+
+  renderChart("chMeta","bar",
+    teamRows.map(t=>t.eq),
+    [{label:"% da meta", data:teamRows.map(t=>Math.round(t.pct)), backgroundColor: teamRows.map(t=>t.pct>=100?"#1E8E5A":t.pct>=70?"#C77F00":"#C0392B")}]
+  );
+
+  // ---------- Comparativo hoje x ontem ----------
+  const m2Hoje = exec.filter(r=>isSameDay(r.date,today)).reduce((s,r)=>s+r.areaM2,0);
+  const m2Ontem = exec.filter(r=>isSameDay(r.date,yesterday)).reduce((s,r)=>s+r.areaM2,0);
+  const servHoje = exec.filter(r=>isSameDay(r.date,today)).length;
+  const servOntem = exec.filter(r=>isSameDay(r.date,yesterday)).length;
+  function compareRow(label,hoje,ontem,fmt){
+    const delta = ontem>0 ? ((hoje-ontem)/ontem*100) : (hoje>0?100:0);
+    return `<div><div class="small text-muted">${label}</div><div style="font-family:var(--font-display);font-weight:700;font-size:18px;">${fmt(hoje)}</div>
+      <div class="small ${delta>=0?'up arrow-up':'down arrow-down'}">${fmtNum(Math.abs(delta),0)}% vs ontem (${fmt(ontem)})</div></div>`;
+  }
+  document.getElementById("compareCards").innerHTML =
+    compareRow("Valor produzido", valorHoje, valorOntem, fmtBRL) +
+    compareRow("O.S. únicas", osHoje, groupsYesterday.length, v=>v) +
+    compareRow("M² pavimentados", m2Hoje, m2Ontem, v=>fmtNum(v,1)+" m²") +
+    compareRow("Serviços executados", servHoje, servOntem, v=>v);
+
+  renderChart("chHojeOntem","bar",["Valor (R$)"],[
+    {label:"Hoje", data:[valorHoje], backgroundColor:PALETTE[0]},
+    {label:"Ontem", data:[valorOntem], backgroundColor:PALETTE[5]}
+  ]);
+
+  // ---------- Recorde do dia (histórico completo, ignorando filtros de UI) ----------
+  const execHist = rowsExecutadas(RAW_ROWS);
+  const groupsHist = osGroups(execHist);
+  const porDiaEquipeValor = {};
+  groupsHist.forEach(g=>{
+    const k = g.dateKey+"|"+g.equipeCanon;
+    porDiaEquipeValor[k] = (porDiaEquipeValor[k]||0)+g.valor;
+  });
+  let recordeValorDia = {valor:0, eq:"—", data:""};
+  Object.entries(porDiaEquipeValor).forEach(([k,v])=>{
+    if(v>recordeValorDia.valor){ const [dk,eq]=k.split("|"); recordeValorDia={valor:v, eq, data:dk}; }
+  });
+  const porDiaOS = {};
+  groupsHist.forEach(g=>{ porDiaOS[g.dateKey]=(porDiaOS[g.dateKey]||0)+1; });
+  let recordeOSDia = Object.entries(porDiaOS).sort((a,b)=>b[1]-a[1])[0] || ["—",0];
+  const porDiaAsfalto = {};
+  execHist.forEach(r=>{ porDiaAsfalto[r.dateKey]=(porDiaAsfalto[r.dateKey]||0)+r.asfaltoM3; });
+  let recordeAsfalto = Object.entries(porDiaAsfalto).sort((a,b)=>b[1]-a[1])[0] || ["—",0];
+
+  document.getElementById("recordGrid").innerHTML = `
+    <div class="record-card"><div class="trophy">🏆</div><h3>Maior produção em um dia</h3><div class="rvalue">${fmtBRL(recordeValorDia.valor)}</div><div class="rmeta">${recordeValorDia.eq} · ${recordeValorDia.data}</div></div>
+    <div class="record-card"><div class="trophy">🏆</div><h3>Maior nº de O.S. em um dia</h3><div class="rvalue">${recordeOSDia[1]}</div><div class="rmeta">${recordeOSDia[0]}</div></div>
+    <div class="record-card"><div class="trophy">🏆</div><h3>Maior volume de asfalto em um dia</h3><div class="rvalue">${fmtNum(recordeAsfalto[1],2)} m³</div><div class="rmeta">${fmtNum(recordeAsfalto[1]*CONFIG.FATOR_CONVERSAO_ASFALTO_TONELADAS,2)} t · ${recordeAsfalto[0]}</div></div>`;
+
+  // ---------- Evolução diária ----------
+  const diasCiclo = [];
+  for(let d=new Date(cycle.start); d<=cycle.end && d<=today; d=addDays(d,1)) diasCiclo.push(new Date(d));
+  const valorPorDia = diasCiclo.map(d=>groupsCiclo.filter(g=>isSameDay(g.date,d)).reduce((s,g)=>s+g.valor,0));
+  const osPorDia = diasCiclo.map(d=>groupsCiclo.filter(g=>isSameDay(g.date,d)).length);
+  renderChart("chEvolValor","line", diasCiclo.map(d=>fmtDate(d).slice(0,5)), [{label:"Valor (R$)", data:valorPorDia, borderColor:PALETTE[0], backgroundColor:"rgba(14,124,144,.12)", fill:true, tension:.3}]);
+  renderChart("chEvolOS","line", diasCiclo.map(d=>fmtDate(d).slice(0,5)), [{label:"O.S.", data:osPorDia, borderColor:PALETTE[1], backgroundColor:"rgba(28,110,164,.12)", fill:true, tension:.3}]);
+
+  // ---------- Pavimentação ----------
+  const pavRows = teamRows.filter(t=>t.tipo==="pavimento");
+  const m2CicloTotal = pavRows.reduce((s,t)=>s+t.m2,0);
+  const m2HojePav = exec.filter(r=>isSameDay(r.date,today) && tipoDeEquipe(r.equipeCanon)==="pavimento").reduce((s,r)=>s+r.areaM2,0);
+  document.getElementById("kpiPavimento").innerHTML = [
+    kpiCard("M² hoje", fmtNum(m2HojePav,1)+"<small> m²</small>"),
+    kpiCard("M² no ciclo", fmtNum(m2CicloTotal,1)+"<small> m²</small>"),
+    kpiCard("% da meta (300 m²/equipe)", pavRows.length? fmtNum(pavRows.reduce((s,t)=>s+t.pct,0)/pavRows.length,0)+"<small>%</small>" : "—"),
+    kpiCard("Asfalto no ciclo", fmtNum(asfaltoM3Ciclo,2)+"<small> m³ / "+fmtNum(asfaltoTonCiclo,2)+" t</small>")
+  ].join("");
+  renderChart("chM2Equipe","bar", pavRows.map(t=>t.eq), [{label:"M²", data:pavRows.map(t=>t.m2), backgroundColor:PALETTE[2]}]);
+  const m2PorDiaPav = diasCiclo.map(d=>execCiclo.filter(r=>isSameDay(r.date,d) && tipoDeEquipe(r.equipeCanon)==="pavimento").reduce((s,r)=>s+r.areaM2,0));
+  renderChart("chM2Dia","bar", diasCiclo.map(d=>fmtDate(d).slice(0,5)), [{label:"M²/dia", data:m2PorDiaPav, backgroundColor:PALETTE[2]}]);
+
+  // ---------- Serviço 21.9 ----------
+  const linhas219 = execCiclo.filter(r=>r.item==="21.9");
+  const os219 = osGroups(linhas219);
+  const existe2110 = RAW_ROWS.some(r=>r.item==="21.10");
+  document.getElementById("kpi219").innerHTML = [
+    kpiCard("21.9 executados no ciclo", os219.length),
+    kpiCard("M² relacionados (21.9)", fmtNum(linhas219.reduce((s,r)=>s+r.areaM2,0),1)+"<small> m²</small>"),
+    kpiCard("Item 21.10", existe2110 ? "Encontrado" : "Não encontrado na planilha")
+  ].join("");
+  const porEquipe219 = {};
+  linhas219.forEach(r=>{ porEquipe219[r.equipeCanon]=(porEquipe219[r.equipeCanon]||0)+1; });
+  renderChart("ch219","bar", Object.keys(porEquipe219), [{label:"Qtd. 21.9", data:Object.values(porEquipe219), backgroundColor:PALETTE[3]}]);
+
+  // ---------- Asfalto ----------
+  const comAsfalto = execCiclo.filter(r=>r.asfaltoSimNao==="Sim").length;
+  const semAsfalto = execCiclo.length - comAsfalto;
+  document.getElementById("kpiAsfalto").innerHTML = [
+    kpiCard("Serviços com asfalto", comAsfalto),
+    kpiCard("Serviços sem asfalto", semAsfalto),
+    kpiCard("% com asfalto", execCiclo.length? fmtNum(comAsfalto/execCiclo.length*100,0)+"<small>%</small>" : "0%"),
+    kpiCard("Volume total (ciclo)", fmtNum(asfaltoM3Ciclo,2)+"<small> m³</small>")
+  ].join("");
+  renderChart("chAsfalto","doughnut", ["Com asfalto","Sem asfalto"], [{data:[comAsfalto,semAsfalto], backgroundColor:[PALETTE[0],PALETTE[5]]}]);
+
+  // ---------- Serviços mais/menos executados ----------
+  const servicoStats = {};
+  const groupsPorServico = {}; // dedup por OS dentro de cada serviço (aprox: usa linhas, já que um serviço específico normalmente não se repete na mesma OS)
+  exec.forEach(r=>{
+    if(!servicoStats[r.descricao]) servicoStats[r.descricao] = {osSet:new Set(), valor:0};
+    servicoStats[r.descricao].osSet.add(r.dateKey+"|"+r.os);
+    servicoStats[r.descricao].valor += r.valorTotalExecutado;
+  });
+  const servicoArr = Object.entries(servicoStats).map(([nome,s])=>({nome, os:s.osSet.size, valor:s.valor})).sort((a,b)=>b.os-a.os);
+  const top5 = servicoArr.slice(0,5);
+  const bottom5 = servicoArr.slice(-5).reverse();
+  renderChart("chTopServ","bar", top5.map(s=>s.nome.length>18?s.nome.slice(0,18)+"…":s.nome), [{label:"O.S.", data:top5.map(s=>s.os), backgroundColor:PALETTE[0]}], {indexAxis:'y'});
+  renderChart("chBottomServ","bar", bottom5.map(s=>s.nome.length>18?s.nome.slice(0,18)+"…":s.nome), [{label:"O.S.", data:bottom5.map(s=>s.os), backgroundColor:PALETTE[5]}], {indexAxis:'y'});
+
+  // ---------- Análise gerencial ----------
+  const melhorTeam = teamRows[0];
+  const piorTeam = [...teamRows].filter(t=>t.tipo!=="desconhecido").sort((a,b)=>a.pct-b.pct)[0];
+  const maiorCrescimento = [...teamRows].sort((a,b)=>b.evolucao-a.evolucao)[0];
+  const maiorQueda = [...teamRows].sort((a,b)=>a.evolucao-b.evolucao)[0];
+  const servicoMaisExec = servicoArr[0];
+  const servicoMenosExec = servicoArr[servicoArr.length-1];
+
+  let texto = `Hoje foram executadas ${osHoje} O.S. únicas, com produção total de ${fmtBRL(valorHoje)}. `;
+  if(melhorTeam) texto += `A equipe ${melhorTeam.eq} apresentou o melhor desempenho do período, atingindo ${fmtNum(melhorTeam.pct,0)}% da meta. `;
+  if(maiorCrescimento && maiorCrescimento.evolucao>0) texto += `${maiorCrescimento.eq} teve o maior crescimento em relação a ontem (+${fmtNum(maiorCrescimento.evolucao,0)}%). `;
+  if(maiorQueda && maiorQueda.evolucao<0) texto += `${maiorQueda.eq} apresentou queda de ${fmtNum(Math.abs(maiorQueda.evolucao),0)}% em relação a ontem. `;
+  if(servicoMaisExec) texto += `O serviço mais executado no período foi "${servicoMaisExec.nome}".`;
+  document.getElementById("analysisText").textContent = texto;
+
+  const alerts = [];
+  teamRows.filter(t=>t.pct<70 && t.tipo!=="desconhecido").forEach(t=> alerts.push({cls:"alert-amber", txt:`⚠️ ${t.eq} está abaixo da meta (${fmtNum(t.pct,0)}%).`}));
+  teamRows.filter(t=>t.pct>=150).forEach(t=> alerts.push({cls:"alert-trophy", txt:`🏆 ${t.eq} está em destaque, acima de 150% da meta.`}));
+  if(recordeValorDia.data===dateKey(today)) alerts.push({cls:"alert-trophy", txt:`🏆 Novo recorde de produção diária hoje: ${fmtBRL(recordeValorDia.valor)} (${recordeValorDia.eq}).`});
+  if(valorOntem>0 && valorHoje < valorOntem*0.85) alerts.push({cls:"alert-amber", txt:"⚠️ Queda significativa na produção em relação ao dia anterior."});
+  document.getElementById("analysisAlerts").innerHTML = alerts.map(a=>`<li class="${a.cls}">${a.txt}</li>`).join("") || '<li>Nenhum alerta no momento.</li>';
+
+  // ---------- Validação cruzada ----------
+  if(VALIDACAO_TOTAIS){
+    const divergencias = [];
+    equipesAtivas.forEach(eq=>{
+      const calculado = groupsCiclo.filter(g=>g.equipeCanon===eq).reduce((s,g)=>s+g.valor,0);
+      const oficial = VALIDACAO_TOTAIS[eq];
+      if(oficial!==undefined && Math.abs(calculado-oficial) > 1){
+        divergencias.push(`${eq}: calculado ${fmtBRL(calculado)} vs. aba RESUMO ${fmtBRL(oficial)}`);
+      }
+    });
+    if(divergencias.length){
+      showValidacaoBanner("<b>Divergência encontrada</b> entre o cálculo deste dashboard e a aba RESUMO MENSAL & DASHBOARD: "+divergencias.join(" · "));
+    } else {
+      showValidacaoBanner(null);
+    }
+  } else {
+    showValidacaoBanner("Não foi possível validar automaticamente os totais contra a aba RESUMO MENSAL & DASHBOARD (aba não encontrada ou formato inesperado).");
+  }
+
+  // ---------- Tabela detalhada ----------
+  TABLE_STATE.rows = uiFiltered.filter(r=>r.situacao==="EXECUTADA");
+  TABLE_STATE.page = 1;
+  renderTable();
+}
+
+/* ============================================================
+   7. TABELA DETALHADA — sort, busca, paginação
+   ============================================================ */
+function renderTable(){
+  let rows = TABLE_STATE.rows;
+  if(TABLE_STATE.search){
+    const q = normalize(TABLE_STATE.search);
+    rows = rows.filter(r=> normalize(r.os).includes(q) || normalize(r.equipeCanon).includes(q) || normalize(r.descricao).includes(q));
+  }
+  rows = [...rows].sort((a,b)=>{
+    let va=a[TABLE_STATE.sortKey], vb=b[TABLE_STATE.sortKey];
+    if(va instanceof Date) { va=va.getTime(); vb=vb.getTime(); }
+    if(typeof va === "string") return va.localeCompare(vb) * TABLE_STATE.sortDir;
+    return (va-vb) * TABLE_STATE.sortDir;
+  });
+  const totalPages = Math.max(1, Math.ceil(rows.length/TABLE_STATE.pageSize));
+  TABLE_STATE.page = Math.min(TABLE_STATE.page, totalPages);
+  const start = (TABLE_STATE.page-1)*TABLE_STATE.pageSize;
+  const pageRows = rows.slice(start, start+TABLE_STATE.pageSize);
+
+  document.querySelector("#tblDetalhe tbody").innerHTML = pageRows.map(r=>`
+    <tr>
+      <td>${fmtDate(r.date)}</td>
+      <td>${r.os}</td>
+      <td>${r.equipeCanon}</td>
+      <td>${r.descricao}</td>
+      <td>${fmtBRL(r.valorTotalExecutado)}</td>
+      <td>${r.areaM2? fmtNum(r.areaM2,2):"—"}</td>
+      <td>${r.asfaltoSimNao}</td>
+      <td>${r.situacao==="EXECUTADA"?"Executada":r.situacao}</td>
+    </tr>`).join("") || `<tr><td colspan="8" class="text-muted">Nenhum registro encontrado.</td></tr>`;
+  document.getElementById("pagerInfo").textContent = `página ${TABLE_STATE.page} de ${totalPages} (${rows.length} registros)`;
+}
+document.querySelectorAll("th.sortable").forEach(th=>{
+  th.addEventListener("click", ()=>{
+    const key = th.dataset.key;
+    if(TABLE_STATE.sortKey===key) TABLE_STATE.sortDir *= -1;
+    else { TABLE_STATE.sortKey = key; TABLE_STATE.sortDir = 1; }
+    renderTable();
+  });
+});
+document.getElementById("tableSearch").addEventListener("input", (e)=>{ TABLE_STATE.search = e.target.value; TABLE_STATE.page=1; renderTable(); });
+document.getElementById("pagerPrev").addEventListener("click", ()=>{ TABLE_STATE.page = Math.max(1, TABLE_STATE.page-1); renderTable(); });
+document.getElementById("pagerNext").addEventListener("click", ()=>{ TABLE_STATE.page += 1; renderTable(); });
+
+/* ============================================================
+   8. FILTROS — eventos da UI
+   ============================================================ */
+function readFiltersFromUI(){
+  FILTERS.dataIni = document.getElementById("fDataIni").value ? new Date(document.getElementById("fDataIni").value+"T00:00:00") : null;
+  FILTERS.dataFim = document.getElementById("fDataFim").value ? new Date(document.getElementById("fDataFim").value+"T23:59:59") : null;
+  FILTERS.equipe = document.getElementById("fEquipe").value;
+  FILTERS.tipo = document.getElementById("fTipo").value;
+  FILTERS.servico = document.getElementById("fServico").value;
+  FILTERS.asfalto = document.getElementById("fAsfalto").value;
+}
+document.getElementById("btnAplicar").addEventListener("click", ()=>{ readFiltersFromUI(); render(); });
+document.getElementById("btnLimpar").addEventListener("click", ()=>{
+  document.querySelectorAll(".filters select, .filters input").forEach(el=>el.value="");
+  FILTERS = {dataIni:null, dataFim:null, equipe:"", tipo:"", servico:"", asfalto:""};
+  render();
+});
+document.getElementById("fRapido").addEventListener("change", (e)=>{
+  const v = e.target.value; const today = new Date(); const cycle = cycleRange(today);
+  let ini=null, fim=null;
+  if(v==="hoje"){ini=today; fim=today;}
+  else if(v==="ontem"){ini=addDays(today,-1); fim=addDays(today,-1);}
+  else if(v==="7dias"){ini=addDays(today,-6); fim=today;}
+  else if(v==="ciclo"){ini=cycle.start; fim=cycle.end;}
+  else if(v==="ciclo_anterior"){const prevRef=addDays(cycle.start,-1); const pc=cycleRange(prevRef); ini=pc.start; fim=pc.end;}
+  else if(v==="mes"){ini=new Date(today.getFullYear(),today.getMonth(),1); fim=today;}
+  document.getElementById("fDataIni").value = ini? dateKey(ini):"";
+  document.getElementById("fDataFim").value = fim? dateKey(fim):"";
+  readFiltersFromUI(); render();
+});
+document.getElementById("btnRefresh").addEventListener("click", refreshAll);
+
+/* ============================================================
+   9. INICIALIZAÇÃO
+   ============================================================ */
+refreshAll();
+setInterval(refreshAll, CONFIG.INTERVALO_ATUALIZACAO_MS);
+</script>
+</body>
+</html>
